@@ -6,13 +6,14 @@
 #include <QApplication>
 #include <QMouseEvent>
 #include <QSqlTableModel>
+#include <QPainter>
 
 class MyModel : public QSqlTableModel
 {
 public:
     MyModel()
     {
-        cellData = false;
+        cellData = 0;
      }
     QVariant data(const QModelIndex &index, int role) const
     {
@@ -25,7 +26,7 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role)
     {
         if (role == Qt::UserRole) {
-            cellData = value.toBool();
+            cellData = value.toInt();
             emit dataChanged(index, index);
             qDebug() << "there";
 
@@ -33,7 +34,7 @@ public:
         }
         return false;
     }
-    bool cellData;
+    int cellData;
 };
 
 
@@ -47,23 +48,36 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
-        bool bools = index.data(Qt::UserRole).value<bool>();
+        // Suppose your model returns an int with 4 bits (1 = checked)
+        int bits = index.data(Qt::UserRole).toInt();
+        QStringList symbols = {"C", "P", "8", "4"};
 
         int boxWidth = option.rect.width() / 4;
 
         for (int i = 0; i < 4; ++i) {
             QStyleOptionButton checkBoxOption;
-            checkBoxOption.state = bools ? QStyle::State_On : QStyle::State_Off;
             checkBoxOption.rect = QRect(
                 option.rect.left() + i * boxWidth,
                 option.rect.top(),
                 boxWidth,
                 option.rect.height()
                 );
-            QApplication::style()->drawControl(QStyle::CE_CheckBox, &checkBoxOption, painter);
+
+            bool checked = bits & (1 << i);
+            checkBoxOption.state = checked ? QStyle::State_On : QStyle::State_Off;
+
+            // Draw the checkbox frame
+            QApplication::style()->drawPrimitive(QStyle::PE_IndicatorCheckBox, &checkBoxOption, painter);
+
+           // if (checked) {
+                // Draw the letter inside the box rect
+                painter->save();
+                painter->setPen(Qt::black);
+                painter->drawText(checkBoxOption.rect, Qt::AlignCenter, symbols[i]);
+                painter->restore();
+           // }
         }
     }
-
     bool editorEvent(QEvent *event,
                      QAbstractItemModel *model,
                      const QStyleOptionViewItem &option,
