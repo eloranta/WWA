@@ -7,37 +7,36 @@
 #include <QMouseEvent>
 #include <QSqlTableModel>
 #include <QPainter>
+#include <QStandardItemModel>
 
-class MyModel : public QSqlTableModel
+
+class MyModel : public QStandardItemModel
 {
 public:
     MyModel()
     {
-        cellData = 0;
+    }
+    // QVariant data(const QModelIndex &index, int role) const
+    // {
+    //     if (role == Qt::UserRole) {
+    //         return QVariant::fromValue(cellData);  //.at(index.row()).at(index.column()));
+    //     }
+    //     return QVariant();
+    // }
+
+     bool setData(const QModelIndex &index, const QVariant &value, int role)
+     {
+         if (role == Qt::UserRole) {
+             QStandardItemModel::setData(index, value, role);
+
+             emit dataChanged(index, index, {role});  // <- 🔑 this tells the view to repaint!
+             qDebug() << index << value;
+
+             return true;
+         }
+         return false;
      }
-    QVariant data(const QModelIndex &index, int role) const
-    {
-        if (role == Qt::UserRole) {
-            return QVariant::fromValue(cellData);  //.at(index.row()).at(index.column()));
-        }
-        return QVariant();
-    }
-
-    bool setData(const QModelIndex &index, const QVariant &value, int role)
-    {
-        if (role == Qt::UserRole) {
-            cellData = value.toInt();
-            emit dataChanged(index, index);
-            qDebug() << "there";
-
-            return true;
-        }
-        return false;
-    }
-    int cellData;
 };
-
-
 
 class CheckboxDelegate : public QStyledItemDelegate
 {
@@ -48,9 +47,9 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
-        // Suppose your model returns an int with 4 bits (1 = checked)
         int bits = index.data(Qt::UserRole).toInt();
-        QStringList symbols = {"C", "P", "8", "4"};
+        qDebug() << index;
+        QStringList symbols = {"CW", "PH", "FT8", "FT4"};
 
         int boxWidth = option.rect.width() / 4;
 
@@ -66,16 +65,29 @@ public:
             bool checked = bits & (1 << i);
             checkBoxOption.state = checked ? QStyle::State_On : QStyle::State_Off;
 
-            // Draw the checkbox frame
-            QApplication::style()->drawPrimitive(QStyle::PE_IndicatorCheckBox, &checkBoxOption, painter);
+            QRect boxRect(
+                option.rect.left() + i * boxWidth,
+                option.rect.top(),
+                boxWidth,
+                option.rect.height()
+                );
 
-           // if (checked) {
-                // Draw the letter inside the box rect
+            boxRect.adjust(1, 1, -1, -1);
+
+            // Draw custom letter if checked
+            if (checked) {
+                painter->setPen(Qt::red);
                 painter->save();
-                painter->setPen(Qt::black);
+                painter->drawRoundedRect(boxRect, 4, 4);
                 painter->drawText(checkBoxOption.rect, Qt::AlignCenter, symbols[i]);
                 painter->restore();
-           // }
+            } else {
+                painter->save();
+                painter->setPen(Qt::gray);
+                painter->drawRoundedRect(boxRect, 4, 4);
+                painter->drawText(checkBoxOption.rect, Qt::AlignCenter, symbols[i]);
+                painter->restore();
+            }
         }
     }
     bool editorEvent(QEvent *event,
@@ -83,19 +95,20 @@ public:
                      const QStyleOptionViewItem &option,
                      const QModelIndex &index) override
     {
-        if (event->type() == QEvent::MouseButtonRelease) {
-            QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+         if (event->type() == QEvent::MouseButtonRelease) {
+            auto *mouseEvent = static_cast<QMouseEvent*>(event);
 
-            //int boxWidth = option.rect.width() / 4;
-            //int clickedIndex = (mouseEvent->pos().x() - option.rect.x()) / boxWidth;
+            int boxWidth = option.rect.width() / 4;
+            int clickedIndex = (mouseEvent->pos().x() - option.rect.x()) / boxWidth;
 
-            bool bools = index.data(Qt::UserRole).value<bool>();
-            bools = !bools;
-            model->setData(index, QVariant::fromValue(bools), Qt::UserRole);
-            qDebug() << "here" << bools;
-         }
+            int bits = index.data(Qt::UserRole).toInt();
+            bits ^= (1 << clickedIndex); // Toggle the clicked bit
 
-        return true;
+            model->setData(index, bits, Qt::UserRole);
+            return true;
+        }
+
+        return false;
     }
 };
 
