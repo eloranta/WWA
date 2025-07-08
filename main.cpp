@@ -10,12 +10,13 @@
 #include <QMouseEvent>
 #include <QDebug>
 
-void setupDatabase() {
+bool setupDatabase() {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("modes.db");
+    db.setDatabaseName("WWA.db");
 
     if (!db.open()) {
         qFatal("Cannot open database!");
+        return false;
     }
 
     QSqlQuery query;
@@ -64,15 +65,15 @@ void setupDatabase() {
     } else {
         qDebug() << "Data already exists, skipping insert.";
     }
+    return true;
 }
-
-
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    setupDatabase();
+    if (!setupDatabase())
+        return -1;
     MainWindow window;
     window.show();
 
