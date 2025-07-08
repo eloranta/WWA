@@ -79,26 +79,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableView->setModel(model);
 
-    // ✅ Use the custom delegate on the 'bands' column
-    CheckboxDelegate *delegate = new CheckboxDelegate(ui->tableView);
-    ui->tableView->setItemDelegateForColumn(2, delegate);
-    ui->tableView->setItemDelegateForColumn(3, delegate);
-    ui->tableView->setItemDelegateForColumn(4, delegate);
-    ui->tableView->setItemDelegateForColumn(5, delegate);
-    ui->tableView->setItemDelegateForColumn(6, delegate);
-    ui->tableView->setItemDelegateForColumn(7, delegate);
-    ui->tableView->setItemDelegateForColumn(8, delegate);
-    ui->tableView->setItemDelegateForColumn(9, delegate);
-
     ui->tableView->setColumnHidden(0, true);
 
-    ui->tableView->setColumnWidth(2, 120);
-    ui->tableView->setColumnWidth(3, 120);
-    ui->tableView->setColumnWidth(4, 120);
-    ui->tableView->setColumnWidth(5, 120);
-    ui->tableView->setColumnWidth(6, 120);
-    ui->tableView->setColumnWidth(7, 120);
-    ui->tableView->setColumnWidth(8, 120);
+    CheckboxDelegate *delegate = new CheckboxDelegate(ui->tableView);
+    // ✅ Use the custom delegate on the 'bands' column
+    for (int i = 2; i < 10; i++)
+    {
+        ui->tableView->setItemDelegateForColumn(i, delegate);
+        ui->tableView->setColumnWidth(i, 120);
+    }
 }
 
 MainWindow::~MainWindow()

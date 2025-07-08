@@ -70,12 +70,12 @@ bool setupDatabase() {
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
 
     if (!setupDatabase())
         return -1;
     MainWindow window;
     window.show();
 
-    return a.exec();
+    return app.exec();
 }
