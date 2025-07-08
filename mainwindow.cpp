@@ -90,6 +90,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableView->setItemDelegateForColumn(8, delegate);
     ui->tableView->setItemDelegateForColumn(9, delegate);
 
+    ui->tableView->setColumnHidden(0, true);
+
     ui->tableView->setColumnWidth(2, 120);
     ui->tableView->setColumnWidth(3, 120);
     ui->tableView->setColumnWidth(4, 120);
