@@ -50,7 +50,14 @@ public:
         if (event->type() == QEvent::MouseButtonRelease) {
             auto *mouseEvent = static_cast<QMouseEvent*>(event);
             int boxWidth = option.rect.width() / 4;
+            if (boxWidth <= 0) {
+                return false;
+            }
+
             int clickedIndex = (mouseEvent->pos().x() - option.rect.x()) / boxWidth;
+            if (clickedIndex < 0 || clickedIndex >= 4) {
+                return false;
+            }
 
             int bits = index.data(Qt::DisplayRole).toInt();
             bits ^= (1 << clickedIndex); // toggle bit
@@ -72,7 +79,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    QSqlTableModel *model = new QSqlTableModel;
+    QSqlTableModel *model = new QSqlTableModel(ui->tableView);
     model->setTable("modes");
     model->setEditStrategy(QSqlTableModel::OnFieldChange);
     model->select();

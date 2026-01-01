@@ -5,6 +5,7 @@
 #include <QSqlDatabase>
 #include <QSqlTableModel>
 #include <QSqlQuery>
+#include <QSqlError>
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QMouseEvent>
@@ -22,7 +23,7 @@ bool setupDatabase() {
     QSqlQuery query;
 
     // ✅ Create the table
-    query.exec(R"(
+    if (!query.exec(R"(
         CREATE TABLE IF NOT EXISTS modes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             callsign TEXT,
@@ -35,10 +36,18 @@ bool setupDatabase() {
             "40" INTEGER,
             "80" INTEGER
         )
-    )");
+    )")) {
+        qWarning() << "Failed to create table:" << query.lastError();
+        return false;
+    }
+
 
     // ✅ Only insert if table is empty
-    query.exec("SELECT COUNT(*) FROM modes");
+    if (!query.exec("SELECT COUNT(*) FROM modes")) {
+        qWarning() << "Failed to count rows:" << query.lastError();
+        return false;
+    }
+
     if (query.next() && query.value(0).toInt() == 0) {
         QStringList calls = {
             "3B8WWA","3Z6I","4M5A","4M5DX","4U1A","8A1A","9M2WWA","9M8WWA","A43WWA","AT2WWA","AT3WWA","AT4WWA","AT6WWA","AT7WWA","BA3RA","BA7CK","BG0DXC","BH9CA","BI4SSB","BY1RX",
