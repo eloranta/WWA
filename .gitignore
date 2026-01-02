@@ -1,0 +1,28 @@
+# Qt Creator
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.qmlproject.user
+*.qmlproject.user.*
+*.creatortags
+
+# Build dirs
+build/
+build-*/
+
+# Qt generated
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+
+# CMake (if used later)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# OS / tooling
+.DS_Store
+Thumbs.db
