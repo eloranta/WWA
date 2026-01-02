@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QDebug>
 #include <QFile>
+#include <QHeaderView>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -16,15 +17,17 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     openDatabase();
+
     QSqlTableModel *model = new QSqlTableModel(ui->tableView);
     model->setTable("modes");
     model->setEditStrategy(QSqlTableModel::OnFieldChange);
     model->select();
 
     ui->tableView->setModel(model);
-
     ui->tableView->setColumnHidden(0, true);
-
+    ui->tableView->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
 MainWindow::~MainWindow()
