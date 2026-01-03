@@ -290,11 +290,13 @@ void MainWindow::updateStatusCounts()
     const int ph = query.value(1).toInt();
     const int ft8 = query.value(2).toInt();
     const int ft4 = query.value(3).toInt();
+    const int total = (cw * 5) + (ph * 5) + (ft8 * 2) + (ft4 * 2);
     statusCountsLabel->setText(
-        QString("CW %1 | PH %2 | FT8 %3 | FT4 %4")
+        QString("CW %1 | PH %2 | FT8 %3 | FT4 %4 | Total %5")
             .arg(cw)
             .arg(ph)
             .arg(ft8)
             .arg(ft4)
+            .arg(total)
     );
 }
