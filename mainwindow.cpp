@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QHeaderView>
+#include <QMessageBox>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -103,6 +104,37 @@ MainWindow::MainWindow(QWidget *parent)
         ui->tableView->setItemDelegateForColumn(i, delegate);
         ui->tableView->setColumnWidth(i, 120);
     }
+
+    connect(ui->clearButton, &QPushButton::clicked, this, [this, model]() {
+        const QMessageBox::StandardButton choice =
+            QMessageBox::warning(
+                this,
+                "Clear all values",
+                "Clear all band values?",
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No
+            );
+        if (choice != QMessageBox::Yes) {
+            return;
+        }
+        QSqlQuery query;
+        const char *clearSql =
+            "UPDATE modes SET "
+            "\"10\"=0, "
+            "\"12\"=0, "
+            "\"15\"=0, "
+            "\"17\"=0, "
+            "\"20\"=0, "
+            "\"30\"=0, "
+            "\"40\"=0, "
+            "\"80\"=0";
+        if (!query.exec(clearSql)) {
+            statusBar()->showMessage("Clear failed: " + query.lastError().text());
+            return;
+        }
+        model->select();
+        statusBar()->showMessage("All values cleared");
+    });
 }
 
 MainWindow::~MainWindow()
