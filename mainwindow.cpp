@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QHeaderView>
+#include <QLabel>
 #include <QMessageBox>
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -105,6 +106,22 @@ MainWindow::MainWindow(QWidget *parent)
         ui->tableView->setColumnWidth(i, 120);
     }
 
+    statusCountsLabel = new QLabel(this);
+    statusBar()->addPermanentWidget(statusCountsLabel);
+
+    connect(model, &QAbstractItemModel::dataChanged, this, [this]() {
+        updateStatusCounts();
+    });
+    connect(model, &QAbstractItemModel::modelReset, this, [this]() {
+        updateStatusCounts();
+    });
+    connect(model, &QAbstractItemModel::rowsInserted, this, [this]() {
+        updateStatusCounts();
+    });
+    connect(model, &QAbstractItemModel::rowsRemoved, this, [this]() {
+        updateStatusCounts();
+    });
+
     connect(ui->clearButton, &QPushButton::clicked, this, [this, model]() {
         const QMessageBox::StandardButton choice =
             QMessageBox::warning(
@@ -133,8 +150,11 @@ MainWindow::MainWindow(QWidget *parent)
             return;
         }
         model->select();
+        updateStatusCounts();
         statusBar()->showMessage("All values cleared");
     });
+
+    updateStatusCounts();
 }
 
 MainWindow::~MainWindow()
@@ -213,4 +233,68 @@ bool MainWindow::openDatabase()
 
     statusBar()->showMessage("Opened WWA.db");
     return true;
+}
+
+void MainWindow::updateStatusCounts()
+{
+    if (!statusCountsLabel) {
+        return;
+    }
+
+    QSqlQuery query;
+    const char *countSql =
+        "SELECT "
+        "SUM(CASE WHEN (\"10\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"12\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"15\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"17\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"20\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"30\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"40\" & 1) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"80\" & 1) != 0 THEN 1 ELSE 0 END) AS cw, "
+        "SUM(CASE WHEN (\"10\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"12\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"15\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"17\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"20\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"30\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"40\" & 2) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"80\" & 2) != 0 THEN 1 ELSE 0 END) AS ph, "
+        "SUM(CASE WHEN (\"10\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"12\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"15\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"17\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"20\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"30\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"40\" & 4) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"80\" & 4) != 0 THEN 1 ELSE 0 END) AS ft8, "
+        "SUM(CASE WHEN (\"10\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"12\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"15\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"17\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"20\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"30\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"40\" & 8) != 0 THEN 1 ELSE 0 END + "
+            "CASE WHEN (\"80\" & 8) != 0 THEN 1 ELSE 0 END) AS ft4 "
+        "FROM modes";
+    if (!query.exec(countSql)) {
+        statusCountsLabel->setText("CW 0 | PH 0 | FT8 0 | FT4 0");
+        return;
+    }
+    if (!query.next()) {
+        statusCountsLabel->setText("CW 0 | PH 0 | FT8 0 | FT4 0");
+        return;
+    }
+
+    const int cw = query.value(0).toInt();
+    const int ph = query.value(1).toInt();
+    const int ft8 = query.value(2).toInt();
+    const int ft4 = query.value(3).toInt();
+    statusCountsLabel->setText(
+        QString("CW %1 | PH %2 | FT8 %3 | FT4 %4")
+            .arg(cw)
+            .arg(ph)
+            .arg(ft8)
+            .arg(ft4)
+    );
 }

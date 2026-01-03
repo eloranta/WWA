@@ -7,6 +7,8 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+class QLabel;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -17,7 +19,9 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    QLabel *statusCountsLabel = nullptr;
     bool openDatabase();
+    void updateStatusCounts();
 };
 
 #endif // MAINWINDOW_H
