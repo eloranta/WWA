@@ -90,6 +90,7 @@ MainWindow::MainWindow(QWidget *parent)
     QSqlTableModel *model = new QSqlTableModel(ui->tableView);
     model->setTable("modes");
     model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    model->setSort(1, Qt::AscendingOrder);
     model->select();
 
     ui->tableView->setModel(model);
@@ -152,6 +153,26 @@ MainWindow::MainWindow(QWidget *parent)
         model->select();
         updateStatusCounts();
         statusBar()->showMessage("All values cleared");
+    });
+
+    connect(ui->addRowButton, &QPushButton::clicked, this, [this, model]() {
+        const int row = model->rowCount();
+        if (!model->insertRow(row)) {
+            statusBar()->showMessage("Add row failed");
+            return;
+        }
+        model->setData(model->index(row, 1), "");
+        for (int col = 2; col < 10; ++col) {
+            model->setData(model->index(row, col), 0);
+        }
+        if (!model->submitAll()) {
+            statusBar()->showMessage("Add row failed: " + model->lastError().text());
+            model->revertAll();
+            return;
+        }
+        model->select();
+        updateStatusCounts();
+        statusBar()->showMessage("Row added");
     });
 
     updateStatusCounts();

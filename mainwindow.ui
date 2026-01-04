@@ -21,6 +21,13 @@
     <item row="1" column="0">
      <layout class="QHBoxLayout" name="bottomRowLayout">
       <item>
+       <widget class="QPushButton" name="addRowButton">
+        <property name="text">
+         <string>Add</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="clearButton">
         <property name="text">
          <string>Clear</string>
