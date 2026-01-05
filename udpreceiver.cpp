@@ -138,78 +138,78 @@ static bool decodeType6(QDataStream &ds, const QString &id)
     return true;
 }
 
-static bool decodeType5_QsoLogged(QDataStream &ds, const QString &id)
+static QString bandFromHz(quint64 hz)
 {
-    // Always-present (classic) fields (type 5) :contentReference[oaicite:1]{index=1}
+    // Return strings matching your DB columns: "10","12","15","17","20","30","40","80"
+    // (rough band edges; adjust if you want strict digital subbands)
+    if (hz >= 28000000ULL && hz <= 29700000ULL) return "10";
+    if (hz >= 24890000ULL && hz <= 24990000ULL) return "12";
+    if (hz >= 21000000ULL && hz <= 21450000ULL) return "15";
+    if (hz >= 18068000ULL && hz <= 18168000ULL) return "17";
+    if (hz >= 14000000ULL && hz <= 14350000ULL) return "20";
+    if (hz >= 10100000ULL && hz <= 10150000ULL) return "30";
+    if (hz >=  7000000ULL && hz <=  7300000ULL) return "40";
+    if (hz >=  3500000ULL && hz <=  4000000ULL) return "80";
+    return ""; // unknown/not one of your columns
+}
+
+static bool decodeType5_QsoLoggedAndEmit(QDataStream &ds, UdpReceiver *self)
+{
+    // Type 5 (QSO Logged): common fields
+    // DateTimeOff, dxCall, dxGrid, dialFreqHz, mode, rptSent, rptRcvd, txPower, comments, name
     QDateTime dtOff;
-    QString dxCall, dxGrid;
     quint64 dialFreqHz = 0;
-    QString mode, rptSent, rptRcvd, txPower, comments, name;
 
     ds >> dtOff;
-    dxCall   = readUtf8(ds);
-    dxGrid   = readUtf8(ds);
+
+    const QString dxCall   = readUtf8(ds);
+    const QString dxGrid   = readUtf8(ds);
+
     ds >> dialFreqHz;
-    mode     = readUtf8(ds);
-    rptSent  = readUtf8(ds);
-    rptRcvd  = readUtf8(ds);
-    txPower  = readUtf8(ds);
-    comments = readUtf8(ds);
-    name     = readUtf8(ds);
+
+    const QString mode     = readUtf8(ds);
+    const QString rptSent  = readUtf8(ds);
+    const QString rptRcvd  = readUtf8(ds);
+    const QString txPower  = readUtf8(ds);
+    const QString comments = readUtf8(ds);
+    const QString name     = readUtf8(ds);
 
     if (ds.status() != QDataStream::Ok) {
-        qWarning() << "Type5 (short) decode failed:" << ds.status();
+        qWarning() << "Type5 decode failed:" << ds.status();
         return false;
     }
 
-    // Optional extended fields (newer WSJT-X builds include these) :contentReference[oaicite:2]{index=2}
-    QDateTime dtOn;
-    QString operatorCall, myCall, myGrid, exchSent, exchRcvd, adifPropMode;
-
-    if (ds.device() && ds.device()->bytesAvailable() > 0) {
-        ds >> dtOn;
-        operatorCall = readUtf8(ds);
-        myCall       = readUtf8(ds);
-        myGrid       = readUtf8(ds);
-        exchSent     = readUtf8(ds);
-        exchRcvd     = readUtf8(ds);
-        adifPropMode = readUtf8(ds);
-
-        if (ds.status() != QDataStream::Ok) {
-            qWarning() << "Type5 (extended) decode failed:" << ds.status();
-            return false;
-        }
+    // Only FT8/FT4 as requested
+    const QString modeUp = mode.trimmed().toUpper();
+    if (modeUp != "FT8" && modeUp != "FT4") {
+        return true; // decoded fine, but ignore other modes
     }
 
-    qDebug().noquote()
-        << "QSO_LOGGED(type=5)"
-        << "id=" << id
-        << "off=" << dtOff.toString(Qt::ISODateWithMs)
-        << "dxCall=" << dxCall
-        << "dxGrid=" << dxGrid
-        << "dialFreqHz=" << dialFreqHz
-        << "mode=" << mode
-        << "rptSent=" << rptSent
-        << "rptRcvd=" << rptRcvd
-        << "txPwr=" << txPower
-        << "name=" << name
-        << "comments=" << comments;
-
-    if (dtOn.isValid() || !myCall.isEmpty()) {
-        qDebug().noquote()
-        << "  on=" << dtOn.toString(Qt::ISODateWithMs)
-        << "opCall=" << operatorCall
-        << "myCall=" << myCall
-        << "myGrid=" << myGrid
-        << "exchSent=" << exchSent
-        << "exchRcvd=" << exchRcvd
-        << "prop=" << adifPropMode;
+    const QString band = bandFromHz(dialFreqHz);
+    if (band.isEmpty()) {
+        // Not one of your DB columns; still can emit if you want.
+        qDebug().noquote() << "QSO_LOGGED (ignored band) call=" << dxCall
+                           << "freq=" << dialFreqHz << "mode=" << modeUp;
+        return true;
     }
 
+    // Debug in UDP class
+    qDebug().noquote() << "QSO_LOGGED emit -> call=" << dxCall
+                       << "band=" << band
+                       << "mode=" << modeUp
+                       << "freq=" << dialFreqHz
+                       << "grid=" << dxGrid
+                       << "rptS=" << rptSent
+                       << "rptR=" << rptRcvd
+                       << "pwr=" << txPower
+                       << "name=" << name
+                       << "comments=" << comments;
+
+    emit self->qsoLogged(dxCall, band, modeUp);
     return true;
 }
 
-static void decodeWsjtxDatagram(const QByteArray &datagram)
+static void decodeWsjtxDatagram(const QByteArray &datagram, UdpReceiver *self)
 {
     QDataStream ds(datagram);
     ds.setByteOrder(QDataStream::BigEndian);
@@ -229,7 +229,7 @@ static void decodeWsjtxDatagram(const QByteArray &datagram)
     // qDebug().noquote() << "WSJT-X schema=" << schema << "type=" << type << "id=" << id;
 
     switch (type) {
-    case 5:  decodeType5_QsoLogged(ds, id); break;   // QSO Logged
+    case 5:  decodeType5_QsoLoggedAndEmit(ds, self); break;   // QSO Logged
     // case 6:  decodeType6_Close(ds, id); break;       // Close
     default:
         // qDebug() << "Unhandled type" << type
@@ -286,7 +286,7 @@ void UdpReceiver::onReadyRead()
         //     << "len=" << datagram.size()
         //     << "msg=" << text.trimmed();
 
-        decodeWsjtxDatagram(datagram);
+        decodeWsjtxDatagram(datagram, this);
     }
 }
 

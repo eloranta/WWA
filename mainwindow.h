@@ -17,10 +17,10 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
+public slots:
+    void onQsoLogged(const QString &call, const QString &band, const QString &mode);
 private:
     Ui::MainWindow *ui;
-    UdpReceiver udp;
-
+    UdpReceiver *udp = nullptr;
 };
 #endif // MAINWINDOW_H

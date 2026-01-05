@@ -102,10 +102,22 @@ MainWindow::MainWindow(QWidget *parent)
         ui->tableView->setColumnWidth(i, 120);
     }
 
-    udp.start(2237);
+    udp = new UdpReceiver(this);
+
+    connect(udp, &UdpReceiver::qsoLogged,
+            this, &MainWindow::onQsoLogged);
+
+    udp->start(2237);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::onQsoLogged(const QString &call, const QString &band, const QString &mode)
+{
+    qDebug().noquote() << "MainWindow slot: QSO logged -> call=" << call
+                       << "band=" << band
+                       << "mode=" << mode;
 }

@@ -13,7 +13,8 @@ public:
 
     // Start listening on localhost:2237
     bool start(quint16 port = 2237);
-
+signals:
+    void qsoLogged(const QString &call, const QString &band, const QString &mode);
 private slots:
     void onReadyRead();
 
