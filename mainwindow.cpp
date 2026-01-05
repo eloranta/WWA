@@ -85,6 +85,10 @@ MainWindow::MainWindow(QWidget *parent)
     model->select();
 
     ui->tableView->setModel(model);
+    // Disable all selection/highlight
+    ui->tableView->setSelectionMode(QAbstractItemView::NoSelection);
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectItems); // optional
+
 
     ui->tableView->setColumnHidden(0, true);
 
