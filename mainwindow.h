@@ -3,6 +3,8 @@
 
 #include "udpreceiver.h"
 #include <QMainWindow>
+#include <QLabel>
+#include <QSqlTableModel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -22,5 +24,9 @@ public slots:
 private:
     Ui::MainWindow *ui;
     UdpReceiver *udp = nullptr;
+    void updateStatusCounts();
+
+    QLabel *statusCountsLabel = nullptr;
+    QSqlTableModel *m_model = nullptr;
 };
 #endif // MAINWINDOW_H

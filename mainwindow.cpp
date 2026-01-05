@@ -83,16 +83,15 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    QSqlTableModel *model = new QSqlTableModel(ui->tableView);
-    model->setTable("modes");
-    model->setEditStrategy(QSqlTableModel::OnFieldChange);
-    model->select();
+    m_model = new QSqlTableModel(ui->tableView);
+    m_model->setTable("modes");
+    m_model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    m_model->select();
 
-    ui->tableView->setModel(model);
+    ui->tableView->setModel(m_model);
     // Disable all selection/highlight
     ui->tableView->setSelectionMode(QAbstractItemView::NoSelection);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectItems); // optional
-
 
     ui->tableView->setColumnHidden(0, true);
 
@@ -104,13 +103,25 @@ MainWindow::MainWindow(QWidget *parent)
         ui->tableView->setColumnWidth(i, 120);
     }
 
+    connect(m_model, &QAbstractItemModel::dataChanged,
+            this, [this](const QModelIndex &, const QModelIndex &, const QVector<int> &) {
+                updateStatusCounts();
+            });
+
     udp = new UdpReceiver(this);
 
     connect(udp, &UdpReceiver::qsoLogged,
             this, &MainWindow::onQsoLogged);
 
     udp->start(2333);
-}
+
+    statusCountsLabel = new QLabel(this);
+    statusCountsLabel->setMinimumWidth(260);
+    statusCountsLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    ui->statusbar->addPermanentWidget(statusCountsLabel);
+    ui->statusbar->showMessage("Ready");
+    updateStatusCounts();
+ }
 
 MainWindow::~MainWindow()
 {
@@ -193,4 +204,49 @@ void MainWindow::onQsoLogged(const QString &call, const QString &band, const QSt
 
     auto *m = qobject_cast<QSqlTableModel*>(ui->tableView->model()); // TODO:
     if (m) m->select();
+
+    updateStatusCounts();
+
+    ui->statusbar->showMessage(
+        QString("Logged %1 on %2m %3").arg(call, band, mode),
+        3000
+        );
+}
+
+void MainWindow::updateStatusCounts()
+{
+    int cw = 0, ph = 0, ft8 = 0, ft4 = 0;
+
+    static const QStringList bands = {
+        "10","12","15","17","20","30","40","80"
+    };
+
+    QSqlQuery q;
+
+    for (const QString &band : bands) {
+        const QString sql = QString(R"(SELECT "%1" FROM modes)").arg(band);
+        if (!q.exec(sql)) {
+            qWarning() << "Count query failed:" << q.lastError();
+            return;
+        }
+
+        while (q.next()) {
+            const int mask = q.value(0).toInt();
+            if (mask & (1 << 0)) cw++;
+            if (mask & (1 << 1)) ph++;
+            if (mask & (1 << 2)) ft8++;
+            if (mask & (1 << 3)) ft4++;
+        }
+    }
+
+    const int total = cw * 10 + ph * 5 + ft8 * 2 + ft4 * 2;
+
+    statusCountsLabel->setText(
+        QString("CW:%1  PH:%2  FT8:%3  FT4:%4  TOTAL:%5")
+            .arg(cw)
+            .arg(ph)
+            .arg(ft8)
+            .arg(ft4)
+            .arg(total)
+        );
 }
