@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "udpreceiver.h"
+
 #include <QApplication>
 #include <QTableView>
 #include <QSqlDatabase>
@@ -99,6 +101,8 @@ MainWindow::MainWindow(QWidget *parent)
         ui->tableView->setItemDelegateForColumn(i, delegate);
         ui->tableView->setColumnWidth(i, 120);
     }
+
+    udp.start(2237);
 }
 
 MainWindow::~MainWindow()

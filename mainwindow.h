@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "udpreceiver.h"
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -19,5 +20,7 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    UdpReceiver udp;
+
 };
 #endif // MAINWINDOW_H
