@@ -13,6 +13,7 @@
 #include <QDebug>
 #include <QSqlError>
 #include <QVariant>
+#include <QMessageBox>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -107,6 +108,9 @@ MainWindow::MainWindow(QWidget *parent)
             this, [this](const QModelIndex &, const QModelIndex &, const QVector<int> &) {
                 updateStatusCounts();
             });
+
+    connect(ui->clearButton, &QPushButton::clicked,
+            this, &MainWindow::onClearClicked);
 
     udp = new UdpReceiver(this);
 
@@ -211,6 +215,46 @@ void MainWindow::onQsoLogged(const QString &call, const QString &band, const QSt
         QString("Logged %1 on %2m %3").arg(call, band, mode),
         3000
         );
+}
+
+void MainWindow::onClearClicked()
+{
+    const auto response = QMessageBox::question(
+        this,
+        "Confirm Clear",
+        "Set every band value to 0 for all callsigns?",
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+        );
+
+    if (response != QMessageBox::Yes) {
+        return;
+    }
+
+    QSqlQuery q;
+    const QString sql = R"(
+        UPDATE modes SET
+            "10" = 0,
+            "12" = 0,
+            "15" = 0,
+            "17" = 0,
+            "20" = 0,
+            "30" = 0,
+            "40" = 0,
+            "80" = 0
+    )";
+
+    if (!q.exec(sql)) {
+        qWarning() << "Clear failed:" << q.lastError();
+        ui->statusbar->showMessage("Clear failed", 3000);
+        return;
+    }
+
+    if (m_model) {
+        m_model->select();
+    }
+    updateStatusCounts();
+    ui->statusbar->showMessage("Cleared all mode values", 3000);
 }
 
 void MainWindow::updateStatusCounts()

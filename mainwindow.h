@@ -21,6 +21,7 @@ public:
     ~MainWindow();
 public slots:
     void onQsoLogged(const QString &call, const QString &band, const QString &mode);
+    void onClearClicked();
 private:
     Ui::MainWindow *ui;
     UdpReceiver *udp = nullptr;
