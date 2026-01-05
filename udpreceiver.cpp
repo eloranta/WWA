@@ -194,16 +194,16 @@ static bool decodeType5_QsoLoggedAndEmit(QDataStream &ds, UdpReceiver *self)
     }
 
     // Debug in UDP class
-    qDebug().noquote() << "QSO_LOGGED emit -> call=" << dxCall
-                       << "band=" << band
-                       << "mode=" << modeUp
-                       << "freq=" << dialFreqHz
-                       << "grid=" << dxGrid
-                       << "rptS=" << rptSent
-                       << "rptR=" << rptRcvd
-                       << "pwr=" << txPower
-                       << "name=" << name
-                       << "comments=" << comments;
+    // qDebug().noquote() << "QSO_LOGGED emit -> call=" << dxCall
+    //                    << "band=" << band
+    //                    << "mode=" << modeUp
+    //                    << "freq=" << dialFreqHz
+    //                    << "grid=" << dxGrid
+    //                    << "rptS=" << rptSent
+    //                    << "rptR=" << rptRcvd
+    //                    << "pwr=" << txPower
+    //                    << "name=" << name
+    //                    << "comments=" << comments;
 
     emit self->qsoLogged(dxCall, band, modeUp);
     return true;

@@ -107,7 +107,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(udp, &UdpReceiver::qsoLogged,
             this, &MainWindow::onQsoLogged);
 
-    udp->start(2237);
+    udp->start(2333);
 }
 
 MainWindow::~MainWindow()
