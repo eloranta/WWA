@@ -11,6 +11,8 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QDebug>
+#include <QSqlError>
+#include <QVariant>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -117,7 +119,78 @@ MainWindow::~MainWindow()
 
 void MainWindow::onQsoLogged(const QString &call, const QString &band, const QString &mode)
 {
-    qDebug().noquote() << "MainWindow slot: QSO logged -> call=" << call
-                       << "band=" << band
-                       << "mode=" << mode;
+    const QString callUp = call.trimmed().toUpper();
+    const QString bandCol = band.trimmed();          // expects: "10","12","15","17","20","30","40","80"
+    const QString modeUp = mode.trimmed().toUpper(); // "FT8" or "FT4"
+
+    qDebug().noquote() << "MainWindow slot: QSO logged -> call=" << callUp
+                       << "band=" << bandCol
+                       << "mode=" << modeUp;
+
+    // Map mode to your bitmask (CW=0, PH=1, FT8=2, FT4=3)
+    int bit = -1;
+    if (modeUp == "FT8") bit = 2;
+    else if (modeUp == "FT4") bit = 3;
+    else {
+        qDebug() << "Ignoring mode (not FT8/FT4):" << modeUp;
+        return;
+    }
+
+    // IMPORTANT: band is used as a column name, so we must validate it.
+    static const QSet<QString> allowedBands = {"10","12","15","17","20","30","40","80"};
+    if (!allowedBands.contains(bandCol)) {
+        qWarning() << "Ignoring unknown band column:" << bandCol;
+        return;
+    }
+
+    QSqlQuery q;
+
+    // 1) Check if call exists and read current mask value in that band column
+    const QString selectSql = QString(R"(
+        SELECT id, "%1" FROM modes WHERE callsign = ?
+    )").arg(bandCol);
+
+    q.prepare(selectSql);
+    q.addBindValue(callUp);
+
+    if (!q.exec()) {
+        qWarning() << "Select failed:" << q.lastError();
+        return;
+    }
+
+    if (!q.next()) {
+        qDebug() << "Call not found in DB, ignoring:" << callUp;
+        return; // "if call exists in db" -> only update when it exists
+    }
+
+    const int id = q.value(0).toInt();
+    const int currentMask = q.value(1).toInt();
+    const int newMask = currentMask | (1 << bit);
+
+    if (newMask == currentMask) {
+        qDebug() << "Already set, no DB update needed for" << callUp << "band" << bandCol << "mode" << modeUp;
+        return;
+    }
+
+    // 2) Update the band column
+    QSqlQuery u;
+    const QString updateSql = QString(R"(
+        UPDATE modes SET "%1" = ? WHERE id = ?
+    )").arg(bandCol);
+
+    u.prepare(updateSql);
+    u.addBindValue(newMask);
+    u.addBindValue(id);
+
+    if (!u.exec()) {
+        qWarning() << "Update failed:" << u.lastError();
+        return;
+    }
+
+    qDebug().noquote() << "DB updated:" << callUp
+                       << "band" << bandCol
+                       << "mask" << currentMask << "->" << newMask;
+
+    auto *m = qobject_cast<QSqlTableModel*>(ui->tableView->model()); // TODO:
+    if (m) m->select();
 }
