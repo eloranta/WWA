@@ -66,10 +66,153 @@ static bool decodeType2(QDataStream &ds, const QString &id)
     return true;
 }
 
-static void debugDecodeWsjtx(const QByteArray &datagram)
+static bool decodeType6(QDataStream &ds, const QString &id)
+{
+    QDateTime dtOff;
+    QString dxCall;
+    QString dxGrid;
+    quint64 txFreqHz = 0;
+    QString mode;
+    QString reportSent;
+    QString reportRcvd;
+    QString txPower;
+    QString comments;
+    QString name;
+    QDateTime dtOn;
+    QString operatorCall;
+    QString myCall;
+    QString myGrid;
+    QString exchSent;
+    QString exchRcvd;
+    QString adifPropMode;
+
+    ds >> dtOff;
+
+    dxCall        = readUtf8(ds);
+    dxGrid        = readUtf8(ds);
+
+    ds >> txFreqHz;
+
+    mode          = readUtf8(ds);
+    reportSent    = readUtf8(ds);
+    reportRcvd    = readUtf8(ds);
+    txPower       = readUtf8(ds);
+    comments      = readUtf8(ds);
+    name          = readUtf8(ds);
+
+    ds >> dtOn;
+
+    operatorCall  = readUtf8(ds);
+    myCall        = readUtf8(ds);
+    myGrid        = readUtf8(ds);
+    exchSent      = readUtf8(ds);
+    exchRcvd      = readUtf8(ds);
+    adifPropMode  = readUtf8(ds);
+
+    if (ds.status() != QDataStream::Ok) {
+        qWarning() << "Type6 decode failed: stream status =" << ds.status();
+        return false;
+    }
+
+    qDebug().noquote()
+        << "QSO_LOGGED(type=6)"
+        << "id=" << id
+        << "off=" << dtOff.toString(Qt::ISODateWithMs)
+        << "dxCall=" << dxCall
+        << "dxGrid=" << dxGrid
+        << "txFreqHz=" << txFreqHz
+        << "mode=" << mode
+        << "rptSent=" << reportSent
+        << "rptRcvd=" << reportRcvd
+        << "txPwr=" << txPower
+        << "name=" << name
+        << "on=" << dtOn.toString(Qt::ISODateWithMs)
+        << "opCall=" << operatorCall
+        << "myCall=" << myCall
+        << "myGrid=" << myGrid
+        << "exchSent=" << exchSent
+        << "exchRcvd=" << exchRcvd
+        << "prop=" << adifPropMode
+        << "comments=" << comments;
+
+    return true;
+}
+
+static bool decodeType5_QsoLogged(QDataStream &ds, const QString &id)
+{
+    // Always-present (classic) fields (type 5) :contentReference[oaicite:1]{index=1}
+    QDateTime dtOff;
+    QString dxCall, dxGrid;
+    quint64 dialFreqHz = 0;
+    QString mode, rptSent, rptRcvd, txPower, comments, name;
+
+    ds >> dtOff;
+    dxCall   = readUtf8(ds);
+    dxGrid   = readUtf8(ds);
+    ds >> dialFreqHz;
+    mode     = readUtf8(ds);
+    rptSent  = readUtf8(ds);
+    rptRcvd  = readUtf8(ds);
+    txPower  = readUtf8(ds);
+    comments = readUtf8(ds);
+    name     = readUtf8(ds);
+
+    if (ds.status() != QDataStream::Ok) {
+        qWarning() << "Type5 (short) decode failed:" << ds.status();
+        return false;
+    }
+
+    // Optional extended fields (newer WSJT-X builds include these) :contentReference[oaicite:2]{index=2}
+    QDateTime dtOn;
+    QString operatorCall, myCall, myGrid, exchSent, exchRcvd, adifPropMode;
+
+    if (ds.device() && ds.device()->bytesAvailable() > 0) {
+        ds >> dtOn;
+        operatorCall = readUtf8(ds);
+        myCall       = readUtf8(ds);
+        myGrid       = readUtf8(ds);
+        exchSent     = readUtf8(ds);
+        exchRcvd     = readUtf8(ds);
+        adifPropMode = readUtf8(ds);
+
+        if (ds.status() != QDataStream::Ok) {
+            qWarning() << "Type5 (extended) decode failed:" << ds.status();
+            return false;
+        }
+    }
+
+    qDebug().noquote()
+        << "QSO_LOGGED(type=5)"
+        << "id=" << id
+        << "off=" << dtOff.toString(Qt::ISODateWithMs)
+        << "dxCall=" << dxCall
+        << "dxGrid=" << dxGrid
+        << "dialFreqHz=" << dialFreqHz
+        << "mode=" << mode
+        << "rptSent=" << rptSent
+        << "rptRcvd=" << rptRcvd
+        << "txPwr=" << txPower
+        << "name=" << name
+        << "comments=" << comments;
+
+    if (dtOn.isValid() || !myCall.isEmpty()) {
+        qDebug().noquote()
+        << "  on=" << dtOn.toString(Qt::ISODateWithMs)
+        << "opCall=" << operatorCall
+        << "myCall=" << myCall
+        << "myGrid=" << myGrid
+        << "exchSent=" << exchSent
+        << "exchRcvd=" << exchRcvd
+        << "prop=" << adifPropMode;
+    }
+
+    return true;
+}
+
+static void decodeWsjtxDatagram(const QByteArray &datagram)
 {
     QDataStream ds(datagram);
-    ds.setByteOrder(QDataStream::BigEndian);   // WSJT-X network messages are big endian :contentReference[oaicite:1]{index=1}
+    ds.setByteOrder(QDataStream::BigEndian);
 
     quint32 magic = 0, schema = 0, type = 0;
     ds >> magic >> schema >> type;
@@ -81,16 +224,17 @@ static void debugDecodeWsjtx(const QByteArray &datagram)
 
     setStreamVersionFromSchema(ds, schema);
 
-    // After header: Id (unique key) is "utf8" (QByteArray), NOT QString :contentReference[oaicite:2]{index=2}
     const QString id = readUtf8(ds);
 
-    qDebug().noquote() << "WSJT-X schema=" << schema << "type=" << type << "id=" << id;
+    // qDebug().noquote() << "WSJT-X schema=" << schema << "type=" << type << "id=" << id;
 
-    if (type == 2) {
-        decodeType2(ds, id);
-    } else {
-        qDebug() << "Unhandled type" << type << "remaining bytes"
-                 << (ds.device() ? ds.device()->bytesAvailable() : -1);
+    switch (type) {
+    case 5:  decodeType5_QsoLogged(ds, id); break;   // QSO Logged
+    // case 6:  decodeType6_Close(ds, id); break;       // Close
+    default:
+        // qDebug() << "Unhandled type" << type
+        //          << "remaining bytes" << (ds.device() ? ds.device()->bytesAvailable() : -1);
+        break;
     }
 }
 
@@ -142,7 +286,7 @@ void UdpReceiver::onReadyRead()
         //     << "len=" << datagram.size()
         //     << "msg=" << text.trimmed();
 
-        debugDecodeWsjtx(datagram);
+        decodeWsjtxDatagram(datagram);
     }
 }
 
