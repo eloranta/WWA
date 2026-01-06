@@ -14,6 +14,7 @@
 #include <QSqlError>
 #include <QVariant>
 #include <QMessageBox>
+#include <QSqlRecord>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -87,6 +88,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_model = new QSqlTableModel(ui->tableView);
     m_model->setTable("modes");
     m_model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    const int callCol = m_model->fieldIndex("callsign");
+    if (callCol >= 0) {
+        m_model->setSort(callCol, Qt::AscendingOrder);
+    }
     m_model->select();
 
     ui->tableView->setModel(m_model);
@@ -109,6 +114,8 @@ MainWindow::MainWindow(QWidget *parent)
                 updateStatusCounts();
             });
 
+    connect(ui->addButton, &QPushButton::clicked,
+            this, &MainWindow::onAddClicked);
     connect(ui->clearButton, &QPushButton::clicked,
             this, &MainWindow::onClearClicked);
 
@@ -215,6 +222,41 @@ void MainWindow::onQsoLogged(const QString &call, const QString &band, const QSt
         QString("Logged %1 on %2m %3").arg(call, band, mode),
         3000
         );
+}
+
+void MainWindow::onAddClicked()
+{
+    if (!m_model) {
+        return;
+    }
+
+    QSqlRecord rec = m_model->record();
+    rec.setValue("callsign", "");
+    rec.setValue("10", 0);
+    rec.setValue("12", 0);
+    rec.setValue("15", 0);
+    rec.setValue("17", 0);
+    rec.setValue("20", 0);
+    rec.setValue("30", 0);
+    rec.setValue("40", 0);
+    rec.setValue("80", 0);
+
+    if (!m_model->insertRecord(-1, rec)) {
+        qWarning() << "Insert failed:" << m_model->lastError();
+        ui->statusbar->showMessage("Add failed", 3000);
+        return;
+    }
+
+    if (!m_model->submitAll()) {
+        qWarning() << "Submit failed:" << m_model->lastError();
+        ui->statusbar->showMessage("Add failed", 3000);
+        m_model->revertAll();
+        return;
+    }
+
+    m_model->select();
+    updateStatusCounts();
+    ui->statusbar->showMessage("Added empty record", 3000);
 }
 
 void MainWindow::onClearClicked()
