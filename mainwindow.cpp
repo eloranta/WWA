@@ -15,6 +15,7 @@
 #include <QVariant>
 #include <QMessageBox>
 #include <QSqlRecord>
+#include <QAbstractSocket>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -132,6 +133,35 @@ MainWindow::MainWindow(QWidget *parent)
     ui->statusbar->addPermanentWidget(statusCountsLabel);
     ui->statusbar->showMessage("Ready");
     updateStatusCounts();
+
+    rbnSocket = new QTcpSocket(this);
+    connect(rbnSocket, &QTcpSocket::readyRead, this, [this]() {
+        const QByteArray data = rbnSocket->readAll();
+        if (data.isEmpty()) {
+            return;
+        }
+
+        rbnBuffer.append(data);
+        qDebug().noquote() << "RBN:" << data;
+
+        if (!rbnLoginSent && rbnBuffer.contains("Please enter your call:")) {
+            rbnSocket->write("OG3Z\r\n");
+            rbnLoginSent = true;
+            qDebug() << "RBN login sent";
+        }
+    });
+    connect(rbnSocket,
+            QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::errorOccurred),
+            this, [this](QAbstractSocket::SocketError) {
+                qWarning() << "RBN socket error:" << rbnSocket->errorString();
+            });
+    connect(rbnSocket, &QTcpSocket::connected, this, [this]() {
+        qDebug() << "RBN connected";
+    });
+    connect(rbnSocket, &QTcpSocket::disconnected, this, [this]() {
+        qWarning() << "RBN disconnected";
+    });
+    rbnSocket->connectToHost("telnet.reversebeacon.net", 7000);
  }
 
 MainWindow::~MainWindow()

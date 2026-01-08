@@ -5,6 +5,7 @@
 #include <QMainWindow>
 #include <QLabel>
 #include <QSqlTableModel>
+#include <QTcpSocket>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -30,5 +31,8 @@ private:
 
     QLabel *statusCountsLabel = nullptr;
     QSqlTableModel *m_model = nullptr;
+    QTcpSocket *rbnSocket = nullptr;
+    QByteArray rbnBuffer;
+    bool rbnLoginSent = false;
 };
 #endif // MAINWINDOW_H
