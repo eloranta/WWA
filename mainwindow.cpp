@@ -16,6 +16,7 @@
 #include <QMessageBox>
 #include <QSqlRecord>
 #include <QAbstractSocket>
+#include <QRegularExpression>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -142,7 +143,33 @@ MainWindow::MainWindow(QWidget *parent)
         }
 
         rbnBuffer.append(data);
-        qDebug().noquote() << "RBN:" << data;
+        // qDebug().noquote() << "RBN:" << data;
+
+        static const QRegularExpression rbnLineRegex(
+            R"(^DX de\s+\S+:\s+([0-9.]+)\s+([A-Za-z0-9/]+)\b)"
+        );
+
+        while (true) {
+            const int newlineIndex = rbnBuffer.indexOf('\n');
+            if (newlineIndex < 0) {
+                break;
+            }
+
+            const QByteArray lineBytes = rbnBuffer.left(newlineIndex);
+            rbnBuffer.remove(0, newlineIndex + 1);
+
+            const QString line = QString::fromUtf8(lineBytes).trimmed();
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            const QRegularExpressionMatch match = rbnLineRegex.match(line);
+            if (match.hasMatch()) {
+                const QString freq = match.captured(1);
+                const QString call = match.captured(2);
+                qDebug().noquote() << "RBN spot:" << "call=" << call << "freq=" << freq;
+            }
+        }
 
         if (!rbnLoginSent && rbnBuffer.contains("Please enter your call:")) {
             rbnSocket->write("OG3Z\r\n");
