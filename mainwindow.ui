@@ -25,13 +25,32 @@
      <number>0</number>
     </property>
     <item row="0" column="0">
-     <widget class="QTableView" name="tableView">
-      <attribute name="horizontalHeaderVisible">
-       <bool>true</bool>
-      </attribute>
-      <attribute name="verticalHeaderVisible">
-       <bool>false</bool>
-      </attribute>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="logTab">
+       <attribute name="title">
+        <string>Log</string>
+       </attribute>
+       <layout class="QGridLayout" name="logGridLayout">
+        <item row="0" column="0">
+         <widget class="QTableView" name="tableView">
+          <attribute name="horizontalHeaderVisible">
+           <bool>true</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="rbnTab">
+       <attribute name="title">
+        <string>RBN</string>
+       </attribute>
+      </widget>
      </widget>
     </item>
     <item row="1" column="0">
