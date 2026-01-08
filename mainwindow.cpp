@@ -148,6 +148,23 @@ MainWindow::MainWindow(QWidget *parent)
         static const QRegularExpression rbnLineRegex(
             R"(^DX de\s+\S+:\s+([0-9.]+)\s+([A-Za-z0-9/]+)\b)"
         );
+        auto freqToBand = [](double value) -> QString {
+            // RBN spots often use kHz (e.g. 14074.0); normalize to MHz.
+            double mhz = value;
+            if (mhz > 1000.0) {
+                mhz /= 1000.0;
+            }
+
+            if (mhz >= 3.5 && mhz < 4.0) return "80";
+            if (mhz >= 7.0 && mhz < 7.3) return "40";
+            if (mhz >= 10.1 && mhz < 10.15) return "30";
+            if (mhz >= 14.0 && mhz < 14.35) return "20";
+            if (mhz >= 18.068 && mhz < 18.168) return "17";
+            if (mhz >= 21.0 && mhz < 21.45) return "15";
+            if (mhz >= 24.89 && mhz < 24.99) return "12";
+            if (mhz >= 28.0 && mhz < 29.7) return "10";
+            return QString();
+        };
 
         while (true) {
             const int newlineIndex = rbnBuffer.indexOf('\n');
@@ -167,7 +184,28 @@ MainWindow::MainWindow(QWidget *parent)
             if (match.hasMatch()) {
                 const QString freq = match.captured(1);
                 const QString call = match.captured(2);
-                qDebug().noquote() << "RBN spot:" << "call=" << call << "freq=" << freq;
+                const QString callUp = call.trimmed().toUpper();
+                const double freqValue = freq.toDouble();
+                const QString band = freqToBand(freqValue);
+                // qDebug().noquote() << "RBN spot:" << "call=" << call << "freq=" << freq;
+
+                if (band.isEmpty()) {
+                    return;
+                }
+
+                QSqlQuery q;
+                const QString sql = QString(R"(SELECT "%1" FROM modes WHERE callsign = ? LIMIT 1)").arg(band);
+                q.prepare(sql);
+                q.addBindValue(callUp);
+                if (!q.exec()) {
+                    qWarning() << "RBN DB lookup failed:" << q.lastError();
+                } else if (q.next()) {
+                    const int mask = q.value(0).toInt();
+                    // qDebug().noquote() << "RBN in DB:" << callUp;
+                    if (!(mask & (1 << 0))) {
+                        qDebug().noquote() << callUp << freq;
+                    }
+                }
             }
         }
 
