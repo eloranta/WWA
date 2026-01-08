@@ -251,6 +251,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == ui->statusbar && event->type() == QEvent::MouseButtonPress) {
         rbnOutputPaused = !rbnOutputPaused;
+        ui->statusbar->setStyleSheet(rbnOutputPaused ? "color: red;" : "");
         return true;
     }
     return QMainWindow::eventFilter(obj, event);
