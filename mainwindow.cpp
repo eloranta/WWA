@@ -17,6 +17,7 @@
 #include <QSqlRecord>
 #include <QAbstractSocket>
 #include <QRegularExpression>
+#include <QEvent>
 
 // ✅ Custom delegate
 class CheckboxDelegate : public QStyledItemDelegate {
@@ -134,6 +135,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->statusbar->addPermanentWidget(statusCountsLabel);
     ui->statusbar->showMessage("Ready");
     updateStatusCounts();
+    ui->statusbar->installEventFilter(this);
 
     rbnSocket = new QTcpSocket(this);
     connect(rbnSocket, &QTcpSocket::readyRead, this, [this]() {
@@ -165,6 +167,16 @@ MainWindow::MainWindow(QWidget *parent)
             if (mhz >= 28.0 && mhz < 29.7) return "10";
             return QString();
         };
+
+        if (rbnOutputPaused) {
+            if (!rbnLoginSent && rbnBuffer.contains("Please enter your call:")) {
+                rbnSocket->write("OG3Z\r\n");
+                rbnLoginSent = true;
+                qDebug() << "RBN login sent";
+            }
+            rbnBuffer.clear();
+            return;
+        }
 
         while (true) {
             const int newlineIndex = rbnBuffer.indexOf('\n');
@@ -204,6 +216,7 @@ MainWindow::MainWindow(QWidget *parent)
                     // qDebug().noquote() << "RBN in DB:" << callUp;
                     if (!(mask & (1 << 0))) {
                         qDebug().noquote() << callUp << freq;
+                        ui->statusbar->showMessage(QString("%1 %2").arg(callUp, freq));
                     }
                 }
             }
@@ -232,6 +245,15 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == ui->statusbar && event->type() == QEvent::MouseButtonPress) {
+        rbnOutputPaused = !rbnOutputPaused;
+        return true;
+    }
+    return QMainWindow::eventFilter(obj, event);
 }
 
 void MainWindow::onQsoLogged(const QString &call, const QString &band, const QString &mode)

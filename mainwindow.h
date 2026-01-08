@@ -24,6 +24,8 @@ public slots:
     void onQsoLogged(const QString &call, const QString &band, const QString &mode);
     void onAddClicked();
     void onClearClicked();
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 private:
     Ui::MainWindow *ui;
     UdpReceiver *udp = nullptr;
@@ -34,5 +36,6 @@ private:
     QTcpSocket *rbnSocket = nullptr;
     QByteArray rbnBuffer;
     bool rbnLoginSent = false;
+    bool rbnOutputPaused = false;
 };
 #endif // MAINWINDOW_H
