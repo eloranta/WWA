@@ -132,8 +132,11 @@ MainWindow::MainWindow(QWidget *parent)
     statusCountsLabel = new QLabel(this);
     statusCountsLabel->setMinimumWidth(260);
     statusCountsLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    statusInfoLabel = new QLabel(this);
+    statusInfoLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    ui->statusbar->addWidget(statusInfoLabel, 1);
     ui->statusbar->addPermanentWidget(statusCountsLabel);
-    ui->statusbar->showMessage("Ready");
+    statusInfoLabel->setText("Ready");
     updateStatusCounts();
     ui->statusbar->installEventFilter(this);
 
@@ -216,7 +219,9 @@ MainWindow::MainWindow(QWidget *parent)
                     // qDebug().noquote() << "RBN in DB:" << callUp;
                     if (!(mask & (1 << 0))) {
                         qDebug().noquote() << callUp << freq;
-                        ui->statusbar->showMessage(QString("%1 %2").arg(callUp, freq));
+                        if (statusInfoLabel) {
+                            statusInfoLabel->setText(QString("%1 %2").arg(callUp, freq));
+                        }
                     }
                 }
             }
@@ -251,7 +256,9 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == ui->statusbar && event->type() == QEvent::MouseButtonPress) {
         rbnOutputPaused = !rbnOutputPaused;
-        ui->statusbar->setStyleSheet(rbnOutputPaused ? "color: red;" : "");
+        if (statusInfoLabel) {
+            statusInfoLabel->setStyleSheet(rbnOutputPaused ? "color: red;" : "");
+        }
         return true;
     }
     return QMainWindow::eventFilter(obj, event);
@@ -336,10 +343,9 @@ void MainWindow::onQsoLogged(const QString &call, const QString &band, const QSt
 
     updateStatusCounts();
 
-    ui->statusbar->showMessage(
-        QString("Logged %1 on %2m %3").arg(call, band, mode),
-        3000
-        );
+    if (statusInfoLabel) {
+        statusInfoLabel->setText(QString("Logged %1 on %2m %3").arg(call, band, mode));
+    }
 }
 
 void MainWindow::onAddClicked()
@@ -361,20 +367,26 @@ void MainWindow::onAddClicked()
 
     if (!m_model->insertRecord(-1, rec)) {
         qWarning() << "Insert failed:" << m_model->lastError();
-        ui->statusbar->showMessage("Add failed", 3000);
+        if (statusInfoLabel) {
+            statusInfoLabel->setText("Add failed");
+        }
         return;
     }
 
     if (!m_model->submitAll()) {
         qWarning() << "Submit failed:" << m_model->lastError();
-        ui->statusbar->showMessage("Add failed", 3000);
+        if (statusInfoLabel) {
+            statusInfoLabel->setText("Add failed");
+        }
         m_model->revertAll();
         return;
     }
 
     m_model->select();
     updateStatusCounts();
-    ui->statusbar->showMessage("Added empty record", 3000);
+    if (statusInfoLabel) {
+        statusInfoLabel->setText("Added empty record");
+    }
 }
 
 void MainWindow::onClearClicked()
@@ -406,7 +418,9 @@ void MainWindow::onClearClicked()
 
     if (!q.exec(sql)) {
         qWarning() << "Clear failed:" << q.lastError();
-        ui->statusbar->showMessage("Clear failed", 3000);
+        if (statusInfoLabel) {
+            statusInfoLabel->setText("Clear failed");
+        }
         return;
     }
 
@@ -414,7 +428,9 @@ void MainWindow::onClearClicked()
         m_model->select();
     }
     updateStatusCounts();
-    ui->statusbar->showMessage("Cleared all mode values", 3000);
+    if (statusInfoLabel) {
+        statusInfoLabel->setText("Cleared all mode values");
+    }
 }
 
 void MainWindow::updateStatusCounts()

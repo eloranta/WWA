@@ -31,6 +31,7 @@ private:
     UdpReceiver *udp = nullptr;
     void updateStatusCounts();
 
+    QLabel *statusInfoLabel = nullptr;
     QLabel *statusCountsLabel = nullptr;
     QSqlTableModel *m_model = nullptr;
     QTcpSocket *rbnSocket = nullptr;
