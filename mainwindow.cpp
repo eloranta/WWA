@@ -53,6 +53,14 @@ public:
         }
     }
 
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override {
+        Q_UNUSED(parent);
+        Q_UNUSED(option);
+        Q_UNUSED(index);
+        return nullptr;
+    }
+
     bool editorEvent(QEvent *event, QAbstractItemModel *model,
                      const QStyleOptionViewItem &option,
                      const QModelIndex &index) override {
