@@ -159,7 +159,7 @@ MainWindow::MainWindow(QWidget *parent)
         // qDebug().noquote() << "RBN:" << data;
 
         static const QRegularExpression rbnLineRegex(
-            R"(^DX de\s+\S+:\s+([0-9.]+)\s+([A-Za-z0-9/]+)\b)"
+            R"(^DX de\s+\S+:\s+([0-9.]+)\s+([A-Za-z0-9/]+)\b(?:\s+([A-Za-z0-9/]+))?)"
         );
         auto freqToBand = [](double value) -> QString {
             // RBN spots often use kHz (e.g. 14074.0); normalize to MHz.
@@ -208,6 +208,7 @@ MainWindow::MainWindow(QWidget *parent)
                 const QString freq = match.captured(1);
                 const QString call = match.captured(2);
                 const QString callUp = call.trimmed().toUpper();
+                const QString mode = match.captured(3).trimmed().toUpper();
                 const double freqValue = freq.toDouble();
                 const QString band = freqToBand(freqValue);
                 // qDebug().noquote() << "RBN spot:" << "call=" << call << "freq=" << freq;
@@ -224,11 +225,13 @@ MainWindow::MainWindow(QWidget *parent)
                     qWarning() << "RBN DB lookup failed:" << q.lastError();
                 } else if (q.next()) {
                     const int mask = q.value(0).toInt();
-                    // qDebug().noquote() << "RBN in DB:" << callUp;
+                    //qDebug().noquote() << "RBN in DB:" << callUp;
                     if (!(mask & (1 << 0))) {
-                        qDebug().noquote() << callUp << freq;
-                        if (statusInfoLabel) {
+                        //qDebug().noquote() << callUp << mode << freq;
+                        if (statusInfoLabel && mode == "CW") {
                             statusInfoLabel->setText(QString("%1 %2").arg(callUp, freq));
+                        } else {
+                            qDebug() << "RBN non-CW:" << callUp << freq << "mode" << (mode.isEmpty() ? "<none>" : mode);
                         }
                     }
                 }
