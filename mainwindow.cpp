@@ -26,6 +26,13 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override {
+        if (option.state & QStyle::State_Selected) {
+            painter->save();
+            painter->setBrush(QColor("#eef5ff"));
+            painter->setPen(Qt::NoPen);
+            painter->drawRect(option.rect);
+            painter->restore();
+        }
         int bits = index.data(Qt::DisplayRole).toInt();
         QStringList symbols = {"CW", "PH", "FT8", "FT4"};
 
@@ -106,9 +113,11 @@ MainWindow::MainWindow(QWidget *parent)
     m_model->select();
 
     ui->tableView->setModel(m_model);
-    // Disable all selection/highlight
-    ui->tableView->setSelectionMode(QAbstractItemView::NoSelection);
-    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectItems); // optional
+    // Single-row selection with light highlight
+    ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableView->setStyleSheet(
+        "QTableView::item:selected { background: #eef5ff; color: palette(text); }");
 
     ui->tableView->setColumnHidden(0, true);
 
