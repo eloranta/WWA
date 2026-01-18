@@ -203,6 +203,8 @@ MainWindow::MainWindow(QWidget *parent)
                 continue;
             }
 
+            qDebug().noquote() << line;
+
             const QRegularExpressionMatch match = rbnLineRegex.match(line);
             if (match.hasMatch()) {
                 const QString freq = match.captured(1);
