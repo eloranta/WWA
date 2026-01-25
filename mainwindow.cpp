@@ -28,7 +28,7 @@ public:
                const QModelIndex &index) const override {
         if (option.state & QStyle::State_Selected) {
             painter->save();
-            painter->setBrush(QColor("#eef5ff"));
+            painter->setBrush(QColor("#dfefff"));
             painter->setPen(Qt::NoPen);
             painter->drawRect(option.rect);
             painter->restore();
@@ -117,7 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableView->setStyleSheet(
-        "QTableView::item:selected { background: #eef5ff; color: palette(text); }");
+        "QTableView::item:selected { background: #dfefff; color: palette(text); }");
 
     ui->tableView->setColumnHidden(0, true);
 
