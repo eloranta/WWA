@@ -451,7 +451,7 @@ void MainWindow::onClearClicked()
     }
     updateStatusCounts();
     if (statusInfoLabel) {
-        statusInfoLabel->setText("Cleared all mode values");
+        statusInfoLabel->setText("Cleared all data");
     }
 }
 
