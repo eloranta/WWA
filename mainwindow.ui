@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1098</width>
-    <height>490</height>
+    <width>1148</width>
+    <height>510</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -56,6 +56,50 @@
     <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
+       <layout class="QHBoxLayout" name="modeFilterLayout">
+        <item>
+         <widget class="QCheckBox" name="cwCheckBox">
+          <property name="text">
+           <string>CW</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="phCheckBox">
+          <property name="text">
+           <string>PH</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="ft8CheckBox">
+          <property name="text">
+           <string>FT8</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="ft4CheckBox">
+          <property name="text">
+           <string>FT4</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
@@ -95,7 +139,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1098</width>
+     <width>1148</width>
      <height>22</height>
     </rect>
    </property>

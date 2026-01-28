@@ -24,6 +24,11 @@ class CheckboxDelegate : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
+    void setModeVisibility(const std::array<bool, 4> &visible)
+    {
+        modeVisible = visible;
+    }
+
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
                const QModelIndex &index) const override {
         if (option.state & QStyle::State_Selected) {
@@ -34,11 +39,24 @@ public:
             painter->restore();
         }
         int bits = index.data(Qt::DisplayRole).toInt();
-        QStringList symbols = {"CW", "PH", "FT8", "FT4"};
+        const QStringList symbols = {"CW", "PH", "FT8", "FT4"};
 
-        int boxWidth = option.rect.width() / 4;
-
+        QVector<int> visibleIndices;
+        visibleIndices.reserve(4);
         for (int i = 0; i < 4; ++i) {
+            if (modeVisible[i]) {
+                visibleIndices.push_back(i);
+            }
+        }
+
+        if (visibleIndices.isEmpty()) {
+            return;
+        }
+
+        int boxWidth = option.rect.width() / visibleIndices.size();
+
+        for (int i = 0; i < visibleIndices.size(); ++i) {
+            const int modeIndex = visibleIndices[i];
             QRect boxRect(
                 option.rect.left() + i * boxWidth,
                 option.rect.top(),
@@ -48,14 +66,14 @@ public:
 
             boxRect.adjust(2, 2, -2, -2);
 
-            bool checked = bits & (1 << i);
+            bool checked = bits & (1 << modeIndex);
 
             painter->save();
             painter->setPen(Qt::black);
             painter->setBrush(Qt::NoBrush);
             painter->drawRoundedRect(boxRect, 4, 4);
             painter->setPen(checked ? Qt::red : Qt::gray);
-            painter->drawText(boxRect, Qt::AlignCenter, symbols[i]);
+            painter->drawText(boxRect, Qt::AlignCenter, symbols[modeIndex]);
             painter->restore();
         }
     }
@@ -73,18 +91,31 @@ public:
                      const QModelIndex &index) override {
         if (event->type() == QEvent::MouseButtonRelease) {
             auto *mouseEvent = static_cast<QMouseEvent*>(event);
-            int boxWidth = option.rect.width() / 4;
+            QVector<int> visibleIndices;
+            visibleIndices.reserve(4);
+            for (int i = 0; i < 4; ++i) {
+                if (modeVisible[i]) {
+                    visibleIndices.push_back(i);
+                }
+            }
+            if (visibleIndices.isEmpty()) {
+                return false;
+            }
+
+            int boxWidth = option.rect.width() / visibleIndices.size();
             if (boxWidth <= 0) {
                 return false;
             }
 
             int clickedIndex = (mouseEvent->pos().x() - option.rect.x()) / boxWidth;
-            if (clickedIndex < 0 || clickedIndex >= 4) {
+            if (clickedIndex < 0 || clickedIndex >= visibleIndices.size()) {
                 return false;
             }
 
+            const int modeIndex = visibleIndices[clickedIndex];
+
             int bits = index.data(Qt::DisplayRole).toInt();
-            bits ^= (1 << clickedIndex); // toggle bit
+            bits ^= (1 << modeIndex); // toggle bit
 
             model->setData(index, bits, Qt::EditRole);
             QSqlTableModel *sqlModel = qobject_cast<QSqlTableModel*>(model);
@@ -95,6 +126,9 @@ public:
         }
         return false;
     }
+
+private:
+    std::array<bool, 4> modeVisible{{true, true, true, true}};
 };
 
 MainWindow::MainWindow(QWidget *parent)
@@ -121,11 +155,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableView->setColumnHidden(0, true);
 
-    CheckboxDelegate *delegate = new CheckboxDelegate(ui->tableView);
+    checkboxDelegate = new CheckboxDelegate(ui->tableView);
     // ✅ Use the custom delegate on the 'bands' column
     for (int i = 2; i < 10; i++)
     {
-        ui->tableView->setItemDelegateForColumn(i, delegate);
+        ui->tableView->setItemDelegateForColumn(i, checkboxDelegate);
         ui->tableView->setColumnWidth(i, 120);
     }
 
@@ -138,6 +172,11 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onAddClicked);
     connect(ui->clearButton, &QPushButton::clicked,
             this, &MainWindow::onClearClicked);
+
+    connect(ui->cwCheckBox, &QCheckBox::toggled, this, [this]() { updateModeVisibility(); });
+    connect(ui->phCheckBox, &QCheckBox::toggled, this, [this]() { updateModeVisibility(); });
+    connect(ui->ft8CheckBox, &QCheckBox::toggled, this, [this]() { updateModeVisibility(); });
+    connect(ui->ft4CheckBox, &QCheckBox::toggled, this, [this]() { updateModeVisibility(); });
 
     udp = new UdpReceiver(this);
 
@@ -155,6 +194,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->statusbar->addPermanentWidget(statusCountsLabel);
     statusInfoLabel->setText("Ready");
     updateStatusCounts();
+    updateModeVisibility();
     ui->statusbar->installEventFilter(this);
 
     rbnSocket = new QTcpSocket(this);
@@ -491,4 +531,17 @@ void MainWindow::updateStatusCounts()
             .arg(ft4)
             .arg(total)
         );
+}
+
+void MainWindow::updateModeVisibility()
+{
+    modeVisible[0] = ui->cwCheckBox->isChecked();
+    modeVisible[1] = ui->phCheckBox->isChecked();
+    modeVisible[2] = ui->ft8CheckBox->isChecked();
+    modeVisible[3] = ui->ft4CheckBox->isChecked();
+
+    if (checkboxDelegate) {
+        checkboxDelegate->setModeVisibility(modeVisible);
+    }
+    ui->tableView->viewport()->update();
 }
